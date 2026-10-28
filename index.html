@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<title>내 사진 퍼즐</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#12261F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="사진 퍼즐">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  [hidden]{display:none!important}
+  html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  :root{
+    color-scheme: dark;
+    --felt:#1D3A33;
+    --felt-deep:#12261F;
+    --bar:#0E1F1A;
+    --ink:#ECE5D3;
+    --ink-dim:#9FB3A8;
+    --brass:#D8A445;
+    --brass-ink:#2A1D06;
+    --line:rgba(236,229,211,.14);
+    --chip:rgba(236,229,211,.06);
+  }
+  html{box-sizing:border-box;height:100%}
+  *,*::before,*::after{box-sizing:inherit}
+  body{
+    height:100%;margin:0;overflow:hidden;overscroll-behavior:none;
+    background:var(--felt-deep);color:var(--ink);
+    font:400 15px/1.4 "IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
+  }
+  .app{position:relative;height:100%}
+  .btn,.sel{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:58px;padding:0 18px;
+    border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--ink);
+    font-family:inherit;font-size:19px;font-weight:500;line-height:1.2;cursor:pointer;touch-action:manipulation;white-space:nowrap;
+  }
+  .btn:focus-visible,.sel:focus-visible,.vh:focus-visible + label{outline:3px solid var(--brass);outline-offset:2px}
+  .btn.primary{background:var(--brass);color:var(--brass-ink);border-color:transparent;font-weight:700}
+  .btn[aria-pressed="true"]{background:rgba(216,164,69,.16);border-color:var(--brass);color:var(--brass)}
+  .btn[data-armed="1"]{background:#7A2E22;border-color:#C25A45;color:#FFE9E2}
+  .sel{appearance:none;-webkit-appearance:none;padding-right:40px;
+    background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
+    background-position:calc(100% - 22px) 26px,calc(100% - 16px) 26px;background-size:6px 6px;background-repeat:no-repeat;background-color:var(--chip)}
+  .sel option{background:var(--bar);color:var(--ink)}
+  .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .stage{position:absolute;inset:0}
+  #board{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  .gear{
+    position:absolute;right:10px;top:10px;min-height:40px;padding:0 14px;font-size:15px;
+    background:rgba(14,31,26,.55);color:var(--ink-dim);border-color:transparent
+  }
+  .peek{
+    position:absolute;left:16px;top:16px;width:min(30%,300px);
+    border:4px solid var(--ink);border-radius:4px;background:var(--ink);
+    box-shadow:0 12px 30px rgba(0,0,0,.45);pointer-events:none
+  }
+  .peek canvas{display:block;width:100%;height:auto}
+  .veil{position:absolute;inset:0;display:grid;place-items:center;padding:16px;background:rgba(6,16,13,.55);overflow:auto}
+  .card{
+    width:min(100%,460px);padding:26px 24px 24px;border-radius:18px;
+    background:var(--bar);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);
+    display:flex;flex-direction:column;gap:18px
+  }
+  .card h2{margin:0;font-family:"Do Hyeon","IBM Plex Sans KR",sans-serif;font-weight:400;font-size:44px;line-height:1;color:var(--brass)}
+  .card h3{margin:0;font-family:"Do Hyeon","IBM Plex Sans KR",sans-serif;font-weight:400;font-size:30px;line-height:1;color:var(--brass)}
+  .card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 18px;font-size:19px;font-variant-numeric:tabular-nums}
+  .card dt{color:var(--ink-dim)}
+  .card dd{margin:0;font-weight:700}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid2 .wide{grid-column:1 / -1}
+  .note{margin:0;color:var(--ink-dim);font-size:15px}
+  .album{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;border:1px dashed var(--line)}
+  .album .note{font-size:16px}
+  .album .note b{color:var(--brass)}
+  .toast{
+    position:absolute;left:50%;top:16px;transform:translateX(-50%);max-width:calc(100% - 32px);
+    padding:12px 18px;border-radius:12px;background:#3A1E18;border:1px solid #9C4A38;color:#FFE4DB;font-size:17px
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .btn{transition:background .15s,border-color .15s,color .15s}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <main class="stage" id="stage">
+    <canvas id="board" role="img" aria-label="퍼즐 판"></canvas>
+    <div class="peek" id="peekBox" hidden><canvas id="pv"></canvas></div>
+    <button id="gear" class="btn gear" type="button">설정</button>
+    <div class="toast" id="toast" hidden></div>
+
+    <div class="veil" id="menu" hidden>
+      <div class="card" role="dialog" aria-label="설정">
+        <h3>설정</h3>
+        <div class="grid2">
+          <input id="file" class="vh" type="file" accept="image/*">
+          <label for="file" class="btn primary wide">사진 한 장 고르기</label>
+          <input id="dir" class="vh" type="file" webkitdirectory multiple>
+          <label for="dir" class="btn wide" id="dirLbl">폴더 고르기</label>
+          <div class="album wide" id="album" hidden>
+            <p class="note">사진 묶음 <b id="albumN">0</b>장 · 다 맞추면 이 중에서 다른 사진이 나와요</p>
+            <div class="grid2">
+              <button id="next" class="btn" type="button">다른 사진으로</button>
+              <button id="albumClear" class="btn" type="button">묶음 비우기</button>
+            </div>
+          </div>
+          <select id="count" class="sel wide" aria-label="조각 수">
+            <option value="6">6조각</option>
+            <option value="12">12조각</option>
+            <option value="24">24조각</option>
+            <option value="32">32조각</option>
+            <option value="40">40조각</option>
+            <option value="48">48조각</option>
+            <option value="80">80조각</option>
+            <option value="120">120조각</option>
+          </select>
+          <button id="ghost" class="btn" type="button" aria-pressed="false">밑그림</button>
+          <button id="peek" class="btn" type="button" aria-pressed="false">원본 보기</button>
+          <button id="spread" class="btn" type="button">조각 펼치기</button>
+          <button id="again" class="btn" type="button">새로 섞기</button>
+          <button id="sound" class="btn" type="button" aria-pressed="true">소리</button>
+          <button id="full" class="btn" type="button">전체 화면</button>
+        </div>
+        <p class="note" id="stat">시간 <b id="tm">0:00</b> · 맞춘 조각 <b id="pc">0/0</b></p>
+        <button id="menuClose" class="btn primary" type="button">닫고 퍼즐하기</button>
+      </div>
+    </div>
+
+    <div class="veil" id="done" hidden>
+      <div class="card">
+        <h2>완성!</h2>
+        <dl>
+          <dt>걸린 시간</dt><dd id="dTm">0:00</dd>
+          <dt>조각 수</dt><dd id="dPc">0</dd>
+        </dl>
+        <button id="doneNext" class="btn primary" type="button" hidden>다른 사진으로</button>
+        <button id="doneAgain" class="btn primary" type="button">한 번 더 하기</button>
+        <button id="doneClose" class="btn" type="button">그림 보기</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const cv = $('#board'), ctx = cv.getContext('2d');
+  const hitCtx = document.createElement('canvas').getContext('2d');
+  const stage = $('#stage');
+  const KEY = 'jigsaw.v1';
+  const LOCK = 0;
+  const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+  // Tab outline on a unit edge: t runs along the edge, h is how far it bulges out (× tab size).
+  const TPL = [
+    [.12,0, .24,0, .35,0],
+    [.42,0, .45,.05, .41,.10],
+    [.33,.17, .38,.28, .50,.28],
+    [.62,.28, .67,.17, .59,.10],
+    [.55,.05, .58,0, .65,0],
+    [.76,0, .88,0, 1,0]
+  ];
+
+  let W = 0, H = 0, dpr = 1, S = 1, OX = 0, OY = 0;
+  let P = null, drag = null, dirty = true, felt = null;
+  let soundOn = true, showGhost = false, showDone = true;
+
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); return true; } catch(e){ return false; } }
+  };
+  const rnd = (a,b) => a + Math.random()*(b-a);
+
+  // ---------- geometry ----------
+  function gridFor(n, aspect){
+    const cols = Math.max(2, Math.round(Math.sqrt(n*aspect)));
+    const rows = Math.max(2, Math.round(n/cols));
+    return { cols, rows };
+  }
+  function makeParams(cols, rows){
+    const e = () => [Math.random() < .5 ? 1 : -1, +rnd(-.06,.06).toFixed(3), +rnd(.9,1.08).toFixed(3)];
+    const hp = [], vp = [];
+    for (let r = 0; r <= rows; r++){ hp[r] = []; for (let c = 0; c < cols; c++) hp[r][c] = (r === 0 || r === rows) ? 0 : e(); }
+    for (let r = 0; r < rows; r++){ vp[r] = []; for (let c = 0; c <= cols; c++) vp[r][c] = (c === 0 || c === cols) ? 0 : e(); }
+    return { hp, vp };
+  }
+  function makeEdge(ax, ay, bx, by, nx, ny, prm){
+    const dx = bx-ax, dy = by-ay;
+    if (!prm) return { a:[ax,ay], s:[[ax+dx/3, ay+dy/3, ax+2*dx/3, ay+2*dy/3, bx, by]] };
+    const [sg, j, k] = prm, T = P.T*k*sg;
+    const map = (t,h) => { if (t !== 0 && t !== 1) t += j; return [ax+dx*t+nx*h*T, ay+dy*t+ny*h*T]; };
+    return { a:[ax,ay], s: TPL.map(q => [...map(q[0],q[1]), ...map(q[2],q[3]), ...map(q[4],q[5])]) };
+  }
+  function addFwd(path, e){ for (const s of e.s) path.bezierCurveTo(s[0],s[1],s[2],s[3],s[4],s[5]); }
+  function addRev(path, e){
+    for (let i = e.s.length-1; i >= 0; i--){
+      const s = e.s[i], prev = i === 0 ? e.a : [e.s[i-1][4], e.s[i-1][5]];
+      path.bezierCurveTo(s[2],s[3],s[0],s[1],prev[0],prev[1]);
+    }
+  }
+  function buildPaths(){
+    const { cols, rows, cw, ch } = P, HE = [], VE = [];
+    for (let r = 0; r <= rows; r++){ HE[r] = []; for (let c = 0; c < cols; c++) HE[r][c] = makeEdge(c*cw, r*ch, (c+1)*cw, r*ch, 0, 1, P.hp[r][c]); }
+    for (let r = 0; r < rows; r++){ VE[r] = []; for (let c = 0; c <= cols; c++) VE[r][c] = makeEdge(c*cw, r*ch, c*cw, (r+1)*ch, 1, 0, P.vp[r][c]); }
+    for (const p of P.pieces){
+      const path = new Path2D();
+      path.moveTo(p.c*cw, p.r*ch);
+      addFwd(path, HE[p.r][p.c]);
+      addFwd(path, VE[p.r][p.c+1]);
+      addRev(path, HE[p.r+1][p.c]);
+      addRev(path, VE[p.r][p.c]);
+      path.closePath();
+      p.path = path;
+    }
+  }
+
+  // ---------- puzzle state ----------
+  function build(img, count, sample, dataURL, saved){
+    let cols, rows, hp, vp;
+    if (saved){ ({ cols, rows, hp, vp } = saved); }
+    else { ({ cols, rows } = gridFor(count, img.width/img.height)); ({ hp, vp } = makeParams(cols, rows)); }
+    const cw = 1, ch = (img.height/rows)/(img.width/cols), T = Math.min(cw, ch);
+    P = { img, sample, dataURL, count, cols, rows, cw, ch, T, pad: .36*T, hp, vp,
+          pieces: [], grid: [], groups: new Map([[LOCK, []]]),
+          elapsed: saved ? saved.el || 0 : 0, moves: saved ? saved.mv || 0 : 0,
+          done: !!(saved && saved.done), started: false };
+    for (let r = 0; r < rows; r++){
+      P.grid[r] = [];
+      for (let c = 0; c < cols; c++){
+        const p = { c, r, x: c*cw, y: r*ch, g: r*cols + c + 1, path: null, bmp: null };
+        P.grid[r][c] = p; P.pieces.push(p);
+      }
+    }
+    if (saved){
+      saved.pc.forEach((s, i) => { const p = P.pieces[i]; p.x = s[0]; p.y = s[1]; p.g = s[2]; });
+      // locked pieces render beneath; keep saved stacking for the rest
+      P.pieces = saved.order ? saved.order.map(i => P.pieces[i]).filter(Boolean) : P.pieces;
+    }
+    for (const p of P.pieces){ if (!P.groups.has(p.g)) P.groups.set(p.g, []); P.groups.get(p.g).push(p); }
+    buildPaths();
+    layout();
+    if (saved) clampAll();
+    else { for (const [g, G] of P.groups) if (g !== LOCK) place(G); }
+    renderAll();
+    showDone = true;
+    syncUI();
+    save();
+  }
+  function newPuzzle(img, count, sample, dataURL){
+    if (!sample && !dataURL){
+      try { dataURL = img.toDataURL('image/jpeg', .85); } catch(e){ dataURL = null; }
+    }
+    build(img, count, sample, dataURL, null);
+    $('#menu').hidden = true;
+  }
+
+  function gbox(G){
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of G){ x0 = Math.min(x0,p.x); y0 = Math.min(y0,p.y); x1 = Math.max(x1,p.x+P.cw); y1 = Math.max(y1,p.y+P.ch); }
+    return { x0, y0, x1, y1 };
+  }
+  function shift(G, dx, dy){ for (const p of G){ p.x += dx; p.y += dy; } }
+  function view(){ return { x0: -OX/S, y0: -OY/S, x1: (W-OX)/S, y1: (H-OY)/S }; }
+
+  function place(G){
+    const v = view(), b = gbox(G), gw = b.x1-b.x0, gh = b.y1-b.y0, m = P.pad;
+    const bw = P.cols*P.cw, bh = P.rows*P.ch, gap = P.pad*.5;
+    let best = null;
+    for (let i = 0; i < 80; i++){
+      const x = rnd(v.x0+m, Math.max(v.x0+m, v.x1-m-gw));
+      const y = rnd(v.y0+m, Math.max(v.y0+m, v.y1-m-gh));
+      best = [x, y];
+      if (!(x < bw+gap && x+gw > -gap && y < bh+gap && y+gh > -gap)) break;
+    }
+    shift(G, best[0]-b.x0, best[1]-b.y0);
+  }
+  function clampGroup(G){
+    const v = view(), b = gbox(G), m = P.T*.15;
+    let dx = 0, dy = 0;
+    if (b.x1-b.x0 < v.x1-v.x0-2*m){ if (b.x0 < v.x0+m) dx = v.x0+m-b.x0; else if (b.x1 > v.x1-m) dx = v.x1-m-b.x1; }
+    if (b.y1-b.y0 < v.y1-v.y0-2*m){ if (b.y0 < v.y0+m) dy = v.y0+m-b.y0; else if (b.y1 > v.y1-m) dy = v.y1-m-b.y1; }
+    if (dx || dy) shift(G, dx, dy);
+  }
+  function clampAll(){ for (const [g, G] of P.groups) if (g !== LOCK) clampGroup(G); }
+
+  function join(a, b){
+    const A = P.groups.get(a), B = P.groups.get(b);
+    for (const p of B){ p.g = a; A.push(p); }
+    P.groups.delete(b);
+    return a;
+  }
+  function settle(gid){
+    const tol = .3*P.T;
+    let merged = false;
+    outer: while (gid !== LOCK){
+      const G = P.groups.get(gid);
+      for (const p of G){
+        for (const [dc, dr] of DIRS){
+          const q = P.grid[p.r+dr] && P.grid[p.r+dr][p.c+dc];
+          if (!q || q.g === gid) continue;
+          const ex = q.x - dc*P.cw, ey = q.y - dr*P.ch;
+          if (Math.abs(ex-p.x) < tol && Math.abs(ey-p.y) < tol){
+            shift(G, ex-p.x, ey-p.y);
+            gid = join(q.g, gid);
+            merged = true;
+            continue outer;
+          }
+        }
+      }
+      break;
+    }
+    let locked = gid === LOCK;
+    if (!locked){
+      const G = P.groups.get(gid), p = G[0], ex = p.c*P.cw, ey = p.r*P.ch;
+      if (Math.abs(ex-p.x) < tol && Math.abs(ey-p.y) < tol){ shift(G, ex-p.x, ey-p.y); join(LOCK, gid); locked = true; }
+    }
+    if (locked) beep(784, .13); else if (merged) beep(523, .09);
+    if (P.groups.get(LOCK).length === P.pieces.length) finish();
+  }
+  function front(gid){
+    const G = P.groups.get(gid);
+    P.pieces = P.pieces.filter(p => p.g !== gid).concat(G);
+  }
+  function finish(){
+    P.done = true; P.started = false; showDone = true;
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .18), i*110));
+    syncUI();
+    if (album.length) startAuto();
+  }
+
+  // ---------- rendering ----------
+  function makeFelt(){
+    const c = document.createElement('canvas'); c.width = c.height = 192;
+    const g = c.getContext('2d');
+    g.fillStyle = '#1D3A33'; g.fillRect(0,0,192,192);
+    let s = 7;
+    const r = () => (s = (s*16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 2600; i++){
+      g.fillStyle = r() < .5 ? `rgba(255,255,255,${.015+r()*.03})` : `rgba(0,0,0,${.03+r()*.05})`;
+      g.fillRect(r()*192, r()*192, 1+r()*1.5, 1+r()*1.5);
+    }
+    felt = ctx.createPattern(c, 'repeat');
+  }
+  function layout(){
+    const rc = stage.getBoundingClientRect();
+    W = Math.max(1, rc.width); H = Math.max(1, rc.height);
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+    if (!felt) makeFelt();
+    if (P){
+      const bw = P.cols*P.cw, bh = P.rows*P.ch, f = .9;
+      S = Math.min(W*f/bw, H*f/bh);
+      OX = (W - bw*S)/2; OY = (H - bh*S)/2;
+    }
+    dirty = true;
+  }
+  function renderPiece(p){
+    const k = S*dpr, pad = P.pad;
+    const w = Math.max(1, Math.ceil((P.cw+2*pad)*k)), h = Math.max(1, Math.ceil((P.ch+2*pad)*k));
+    const c = p.bmp || document.createElement('canvas');
+    c.width = w; c.height = h;
+    const g = c.getContext('2d');
+    g.setTransform(k, 0, 0, k, (pad - p.c*P.cw)*k, (pad - p.r*P.ch)*k);
+    const bwU = P.cols*P.cw, bhU = P.rows*P.ch, q = P.img.width/bwU;
+    const x0 = Math.max(0, p.c*P.cw - pad), y0 = Math.max(0, p.r*P.ch - pad);
+    const x1 = Math.min(bwU, (p.c+1)*P.cw + pad), y1 = Math.min(bhU, (p.r+1)*P.ch + pad);
+    const u = dpr/k; // one CSS pixel in board units
+    g.save();
+    g.clip(p.path);
+    g.drawImage(P.img, x0*q, y0*q, (x1-x0)*q, (y1-y0)*q, x0, y0, x1-x0, y1-y0);
+    g.lineJoin = 'round';
+    g.save(); g.translate(u*1.2, u*1.2); g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = u*2; g.stroke(p.path); g.restore();
+    g.save(); g.translate(-u*1.2, -u*1.2); g.strokeStyle = 'rgba(0,0,0,.42)'; g.lineWidth = u*2.2; g.stroke(p.path); g.restore();
+    g.restore();
+    g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = u; g.stroke(p.path);
+    p.bmp = c;
+  }
+  // Piece outlines drawn on the empty board so you can see where each shape goes
+  let outline = null;
+  function renderOutline(){
+    const k = S*dpr, u = dpr/k;
+    const c = outline || document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(P.cols*P.cw*k)); c.height = Math.max(1, Math.ceil(P.rows*P.ch*k));
+    const g = c.getContext('2d');
+    g.setTransform(k, 0, 0, k, 0, 0);
+    g.lineJoin = 'round';
+    g.save(); g.translate(u, u); g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = u*1.6;
+    for (const p of P.pieces) g.stroke(p.path);
+    g.restore();
+    g.strokeStyle = 'rgba(236,229,211,.34)'; g.lineWidth = u*1.3;
+    for (const p of P.pieces) g.stroke(p.path);
+    outline = c;
+  }
+  function renderAll(){ if (!P) return; for (const p of P.pieces) renderPiece(p); renderOutline(); dirty = true; }
+
+  function draw(){
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = felt; ctx.fillRect(0, 0, W, H);
+    if (!P) return;
+    const bw = P.cols*P.cw*S, bh = P.rows*P.ch*S;
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(OX, OY, bw, bh);
+    if (showGhost){ ctx.globalAlpha = .2; ctx.drawImage(P.img, OX, OY, bw, bh); ctx.globalAlpha = 1; }
+    if (outline && !P.done) ctx.drawImage(outline, OX, OY, bw, bh);
+    ctx.strokeStyle = 'rgba(236,229,211,.2)'; ctx.lineWidth = 1; ctx.strokeRect(OX-.5, OY-.5, bw+1, bh+1);
+    const dw = (P.cw + 2*P.pad)*S, dh = (P.ch + 2*P.pad)*S;
+    const put = p => ctx.drawImage(p.bmp, OX + (p.x-P.pad)*S, OY + (p.y-P.pad)*S, dw, dh);
+    if (P.done){
+      ctx.drawImage(P.img, OX, OY, bw, bh);
+      ctx.strokeStyle = '#D8A445'; ctx.lineWidth = 3; ctx.strokeRect(OX-1.5, OY-1.5, bw+3, bh+3);
+      return;
+    }
+    for (const p of P.pieces) if (p.g === LOCK) put(p);
+    for (const p of P.pieces) if (p.g !== LOCK && !(drag && p.g === drag.g)) put(p);
+    if (drag){
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
+      for (const p of P.groups.get(drag.g) || []) put(p);
+      ctx.restore();
+    }
+  }
+  function frame(){ if (dirty){ dirty = false; draw(); } requestAnimationFrame(frame); }
+
+  // ---------- input ----------
+  function toWorld(e){
+    const r = cv.getBoundingClientRect();
+    return { wx: (e.clientX - r.left - OX)/S, wy: (e.clientY - r.top - OY)/S };
+  }
+  function hitTest(p, wx, wy){
+    return hitCtx.isPointInPath(p.path, wx - p.x + p.c*P.cw, wy - p.y + p.r*P.ch);
+  }
+  cv.addEventListener('pointerdown', e => {
+    if (!P || P.done || drag) return;
+    wakeAudio(); wake();
+    const { wx, wy } = toWorld(e);
+    for (let i = P.pieces.length-1; i >= 0; i--){
+      const p = P.pieces[i];
+      if (p.g === LOCK) continue;
+      if (hitTest(p, wx, wy)){
+        drag = { id: e.pointerId, g: p.g, wx, wy, moved: false };
+        front(p.g);
+        try { cv.setPointerCapture(e.pointerId); } catch(_){}
+        dirty = true; e.preventDefault();
+        return;
+      }
+    }
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { wx, wy } = toWorld(e), dx = wx - drag.wx, dy = wy - drag.wy;
+    drag.wx = wx; drag.wy = wy;
+    if (dx || dy){ drag.moved = true; shift(P.groups.get(drag.g), dx, dy); dirty = true; }
+  });
+  const release = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { g, moved } = drag;
+    drag = null;
+    if (moved){
+      P.started = true; P.moves++;
+      clampGroup(P.groups.get(g));
+      settle(g);
+      save();
+    }
+    dirty = true; syncStats();
+  };
+  cv.addEventListener('pointerup', release);
+  cv.addEventListener('pointercancel', release);
+
+  // ---------- sound & screen ----------
+  let ac = null;
+  function wakeAudio(){
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch(e){}
+  }
+  function beep(freq, dur){
+    if (!soundOn || !ac) return;
+    try {
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+      o.type = 'triangle'; o.frequency.value = freq;
+      g.gain.setValueAtTime(.0001, t);
+      g.gain.exponentialRampToValueAtTime(.22, t + .006);
+      g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + .02);
+    } catch(e){}
+  }
+  let wl = null;
+  async function wake(){
+    try { if (!wl && navigator.wakeLock){ wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); } } catch(e){}
+  }
+
+  // ---------- persistence ----------
+  let saveWarned = false;
+  function save(){
+    if (!P) return;
+    const idx = new Map(); P.grid.flat().forEach((p, i) => idx.set(p, i));
+    const st = {
+      v: 1, sample: P.sample, img: P.sample ? null : P.dataURL, count: P.count,
+      cols: P.cols, rows: P.rows, hp: P.hp, vp: P.vp,
+      pc: P.grid.flat().map(p => [+p.x.toFixed(4), +p.y.toFixed(4), p.g]),
+      order: P.pieces.map(p => idx.get(p)),
+      el: Math.round(P.elapsed), mv: P.moves, done: P.done
+    };
+    if (!P.sample && !P.dataURL) return;
+    if (!store.set(KEY, JSON.stringify(st)) && !saveWarned){
+      saveWarned = true;
+      toast('저장 공간이 부족해 진행 상황을 기억하지 못해요. 퍼즐은 그대로 계속할 수 있어요.');
+    }
+  }
+  function boot(){
+    layout();
+    loadAlbum();
+    let st = null;
+    try { st = JSON.parse(store.get(KEY) || 'null'); } catch(e){}
+    const ok = st && st.v === 1 && Array.isArray(st.pc) && st.pc.length === st.cols*st.rows;
+    if (ok && st.sample){ build(sampleImage(), st.count, true, null, st); return; }
+    if (ok && st.img){
+      const im = new Image();
+      im.onload = () => build(fit(im, 1800), st.count, false, st.img, st);
+      im.onerror = () => newPuzzle(sampleImage(), 12, true);
+      im.src = st.img;
+      return;
+    }
+    newPuzzle(sampleImage(), 12, true);
+  }
+
+  // ---------- images ----------
+  function fit(im, max){
+    const s = Math.min(1, max / Math.max(im.naturalWidth || im.width, im.naturalHeight || im.height));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round((im.naturalWidth || im.width)*s));
+    c.height = Math.max(1, Math.round((im.naturalHeight || im.height)*s));
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    return c;
+  }
+  function sampleImage(){
+    const w = 1600, h = 1100, c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d');
+    let s = 11; const r = () => (s = (s*16807) % 2147483647) / 2147483647;
+    let gr = g.createLinearGradient(0, 0, 0, 700);
+    gr.addColorStop(0, '#4F8FC0'); gr.addColorStop(.55, '#9EC5DE'); gr.addColorStop(1, '#F4D6A6');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const sg = g.createRadialGradient(1230, 290, 10, 1230, 290, 240);
+    sg.addColorStop(0, 'rgba(255,246,220,1)'); sg.addColorStop(.3, 'rgba(255,236,190,.85)'); sg.addColorStop(1, 'rgba(255,236,190,0)');
+    g.fillStyle = sg; g.fillRect(900, 0, 700, 700);
+    g.fillStyle = 'rgba(255,255,255,.9)';
+    for (const [x, y, k] of [[240,170,1],[610,105,.7],[960,215,.85],[1440,140,.6]])
+      for (const [ox, oy, rr] of [[0,0,60],[55,-22,48],[108,4,52],[-52,12,40],[48,26,50]]){
+        g.beginPath(); g.ellipse(x+ox*k, y+oy*k, rr*k*1.3, rr*k, 0, 0, Math.PI*2); g.fill();
+      }
+    // 한라산
+    gr = g.createLinearGradient(0, 320, 0, 700);
+    gr.addColorStop(0, '#5E7F95'); gr.addColorStop(1, '#46697A');
+    g.fillStyle = gr; g.beginPath();
+    g.moveTo(0, 650); g.bezierCurveTo(300, 570, 560, 390, 720, 335); g.lineTo(800, 320); g.lineTo(885, 334);
+    g.bezierCurveTo(1040, 390, 1300, 570, 1600, 630); g.lineTo(1600, 720); g.lineTo(0, 720); g.fill();
+    g.fillStyle = '#EEF3F4'; g.beginPath();
+    g.moveTo(686, 350); g.lineTo(720, 335); g.lineTo(800, 320); g.lineTo(885, 334); g.lineTo(922, 352);
+    g.quadraticCurveTo(875, 366, 842, 354); g.quadraticCurveTo(800, 378, 760, 356); g.quadraticCurveTo(720, 370, 686, 350); g.fill();
+    // 오름
+    const hill = (x, y, rw, rh, col) => { g.fillStyle = col; g.beginPath(); g.ellipse(x, y, rw, rh, 0, Math.PI, 0); g.fill(); };
+    hill(230, 720, 270, 130, '#5C8D55'); hill(640, 725, 210, 95, '#6FA063'); hill(1170, 722, 320, 150, '#517C4B'); hill(1490, 730, 190, 85, '#679858');
+    // 들판
+    g.fillStyle = '#76A95A'; g.fillRect(0, 715, w, 130);
+    gr = g.createLinearGradient(0, 840, 0, h);
+    gr.addColorStop(0, '#E8C23C'); gr.addColorStop(1, '#D9A91F');
+    g.fillStyle = gr; g.fillRect(0, 840, w, h-840);
+    for (let i = 0; i < 2600; i++){
+      const y = 860 + r()*(h-860), sz = 2 + (y-840)/260*5*r();
+      g.fillStyle = r() < .25 ? '#6E9A3E' : (r() < .5 ? '#FFE067' : '#F5CE35');
+      g.beginPath(); g.arc(r()*w, y, sz, 0, Math.PI*2); g.fill();
+    }
+    // 돌담
+    for (let x = -20; x < w + 40; x += 46 + r()*18){
+      const y = 835 + r()*8, rw = 26 + r()*14, rh = 18 + r()*8;
+      g.fillStyle = r() < .5 ? '#34393B' : '#2A2F31';
+      g.beginPath(); g.ellipse(x, y, rw, rh, r()*.6-.3, 0, Math.PI*2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.08)';
+      g.beginPath(); g.arc(x - rw*.3, y - rh*.3, 4, 0, Math.PI*2); g.fill();
+    }
+    return c;
+  }
+
+  // ---------- photo album: several photos, a random other one after each finish ----------
+  const ALBUM = 'jigsaw.album', MAX_ALBUM = 300, AUTO_SEC = 10;
+  let album = [];   // keys into the photo store (File objects when the store can't be opened)
+  let bag = [];     // keys not shown yet this round
+  let curKey = null, importJob = 0, dbp = null;
+
+  const shuffle = a => { for (let i = a.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function db(){
+    if (!dbp) dbp = new Promise((ok, no) => {
+      try {
+        const rq = indexedDB.open('jigsaw', 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore('photos');
+        rq.onsuccess = () => ok(rq.result);
+        rq.onerror = () => no(rq.error);
+      } catch(e){ no(e); }
+    });
+    return dbp;
+  }
+  function idb(mode, fn){
+    return db().then(d => new Promise((ok, no) => {
+      const tx = d.transaction('photos', mode), r = fn(tx.objectStore('photos'));
+      tx.oncomplete = () => ok(r && r.result);
+      tx.onerror = tx.onabort = () => no(tx.error);
+    }));
+  }
+  function loadFit(blob){
+    return new Promise((ok, no) => {
+      const url = URL.createObjectURL(blob), im = new Image();
+      im.onload = () => { URL.revokeObjectURL(url); ok(fit(im, 1800)); };
+      im.onerror = () => { URL.revokeObjectURL(url); no(new Error('decode')); };
+      im.src = url;
+    });
+  }
+  const toJpeg = c => new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(new Error('blob')), 'image/jpeg', .85));
+  const isNum = k => typeof k === 'number';
+
+  function saveAlbum(){
+    store.set(ALBUM, JSON.stringify({ keys: album.filter(isNum), bag: bag.filter(isNum), cur: isNum(curKey) ? curKey : null }));
+  }
+  function loadAlbum(){
+    try {
+      const a = JSON.parse(store.get(ALBUM) || 'null');
+      if (a && Array.isArray(a.keys)){ album = a.keys; bag = (a.bag || []).filter(k => album.includes(k)); curKey = a.cur; }
+    } catch(e){}
+    syncAlbum();
+  }
+  function syncAlbum(){
+    const n = album.length;
+    $('#album').hidden = !n;
+    $('#albumN').textContent = n;
+    $('#doneNext').hidden = !n;
+    $('#doneAgain').classList.toggle('primary', !n);
+  }
+
+  async function useAlbum(list){
+    let files = [...list].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(f.name));
+    if (!files.length){ toast('사진 파일이 없어요. 사진이 들어 있는 폴더를 골라 주세요.'); return; }
+    shuffle(files);
+    if (files.length > MAX_ALBUM) files = files.slice(0, MAX_ALBUM);
+    const job = ++importJob;
+    // start a puzzle straight away with the first photo that opens
+    let first = -1, firstImg = null;
+    for (let i = 0; i < files.length && first < 0; i++){
+      try { firstImg = await loadFit(files[i]); first = i; } catch(e){}
+    }
+    if (job !== importJob) return;
+    if (first < 0){ toast('이 사진들은 열 수 없어요. 사진(JPG·PNG) 파일을 골라 주세요.'); return; }
+    saveWarned = false;
+    newPuzzle(firstImg, +$('#count').value, false);
+
+    // remember the photos (shrunk) so the album survives closing the app
+    let stored = true;
+    try { await idb('readwrite', st => st.clear()); } catch(e){ stored = false; }
+    if (job !== importJob) return;
+    if (!stored){
+      album = files.slice(first); curKey = album[0]; bag = album.slice(1);
+      syncAlbum(); saveAlbum();
+      toast(`사진 ${album.length}장으로 묶음을 만들었어요. (앱을 닫으면 묶음은 잊어요)`);
+      return;
+    }
+    album = []; bag = []; curKey = 0;
+    let key = 0;
+    for (let i = first; i < files.length; i++){
+      try {
+        const c = i === first ? firstImg : await loadFit(files[i]);
+        const blob = await toJpeg(c);
+        if (job !== importJob) return;
+        const k = key++;
+        await idb('readwrite', st => st.put(blob, k));
+        if (job !== importJob) return;
+        album.push(k); if (k !== curKey) bag.push(k);
+      } catch(e){ if (job !== importJob) return; }
+      if (album.length % 10 === 0){ syncAlbum(); saveAlbum(); if (files.length - first > 10) toast(`사진 묶음 정리 중… ${album.length}/${files.length - first}`); }
+    }
+    syncAlbum(); saveAlbum();
+    toast(`사진 ${album.length}장으로 묶음을 만들었어요. 다 맞추면 다른 사진이 나와요.`);
+  }
+
+  let nexting = false;
+  async function nextPhoto(){
+    stopAuto();
+    if (!album.length || nexting) return;
+    nexting = true;
+    try {
+      for (let tries = 0; tries < 6 && album.length; tries++){
+        if (!bag.length) bag = album.filter(k => k !== curKey);
+        if (!bag.length) bag = album.slice();
+        const k = bag.splice(Math.floor(Math.random()*bag.length), 1)[0];
+        try {
+          const blob = isNum(k) ? await idb('readonly', st => st.get(k)) : k;
+          if (!blob) throw new Error('missing');
+          const img = await loadFit(blob);
+          curKey = k; saveAlbum();
+          $('#done').hidden = true;
+          newPuzzle(img, +$('#count').value, false);
+          return;
+        } catch(e){ album = album.filter(x => x !== k); syncAlbum(); saveAlbum(); }
+      }
+      toast('다음 사진을 열지 못했어요. 사진을 다시 골라 주세요.');
+    } finally { nexting = false; }
+  }
+  function clearAlbum(){
+    importJob++; album = []; bag = []; curKey = null;
+    idb('readwrite', st => st.clear()).catch(() => {});
+    stopAuto(); syncAlbum(); saveAlbum();
+  }
+
+  // after a finish, move on to another photo by itself unless the player stops it
+  let autoT = 0, autoN = 0;
+  function stopAuto(){ clearInterval(autoT); autoT = 0; $('#doneNext').textContent = '다른 사진으로'; }
+  function startAuto(){
+    stopAuto(); autoN = AUTO_SEC;
+    const b = $('#doneNext'), show = () => { b.textContent = `다른 사진으로 (${autoN})`; };
+    show();
+    autoT = setInterval(() => { if (document.hidden) return; if (--autoN <= 0) nextPhoto(); else show(); }, 1000);
+  }
+
+  // ---------- UI ----------
+  const fmt = ms => {
+    const t = Math.floor(ms/1000), hh = Math.floor(t/3600), mm = Math.floor(t/60) % 60, ss = String(t % 60).padStart(2, '0');
+    return hh ? `${hh}:${String(mm).padStart(2,'0')}:${ss}` : `${mm}:${ss}`;
+  };
+  function syncStats(){
+    if (!P) return;
+    $('#tm').textContent = fmt(P.elapsed);
+    $('#pc').textContent = `${P.groups.get(LOCK).length}/${P.pieces.length}`;
+  }
+  function syncUI(){
+    const sel = $('#count');
+    if (![...sel.options].some(o => +o.value === P.count)) sel.add(new Option(`${P.count}조각`, P.count));
+    sel.value = String(P.count);
+    const pv = $('#pv');
+    pv.width = 480; pv.height = Math.round(480*P.img.height/P.img.width);
+    pv.getContext('2d').drawImage(P.img, 0, 0, pv.width, pv.height);
+    $('#done').hidden = !(P.done && showDone);
+    $('#dTm').textContent = fmt(P.elapsed);
+    $('#dPc').textContent = `${P.pieces.length}조각`;
+    syncStats(); dirty = true;
+  }
+  let toastT = 0;
+  function toast(msg){
+    const t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 4200);
+  }
+  const toggle = (btn, on) => btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+
+  $('#file').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const url = URL.createObjectURL(f), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(url); saveWarned = false; newPuzzle(fit(im, 1800), +$('#count').value, false); };
+    im.onerror = () => { URL.revokeObjectURL(url); toast('이 파일은 열 수 없어요. 사진(JPG·PNG) 파일을 골라 주세요.'); };
+    im.src = url;
+  });
+  $('#dir').addEventListener('change', e => {
+    const fs = e.target.files ? [...e.target.files] : [];
+    e.target.value = '';
+    if (fs.length) useAlbum(fs);
+  });
+  // folder picking doesn't work on iPhone/iPad; there the same button picks several photos instead
+  const iOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!('webkitdirectory' in $('#dir')) || iOS){
+    const d = $('#dir'); d.removeAttribute('webkitdirectory'); d.accept = 'image/*';
+    $('#dirLbl').textContent = '사진 여러 장 고르기';
+  }
+  $('#next').addEventListener('click', nextPhoto);
+  $('#doneNext').addEventListener('click', nextPhoto);
+  const clr = $('#albumClear');
+  let clrT = 0;
+  clr.addEventListener('click', () => {
+    if (clr.dataset.armed !== '1'){
+      clr.dataset.armed = '1'; clr.textContent = '한 번 더 누르면 비워요';
+      clearTimeout(clrT); clrT = setTimeout(() => { clr.dataset.armed = '0'; clr.textContent = '묶음 비우기'; }, 2600);
+      return;
+    }
+    clearTimeout(clrT); clr.dataset.armed = '0'; clr.textContent = '묶음 비우기';
+    clearAlbum();
+  });
+  $('#count').addEventListener('change', e => { if (P) newPuzzle(P.img, +e.target.value, P.sample, P.dataURL); });
+  $('#peek').addEventListener('click', e => { const on = $('#peekBox').hidden; $('#peekBox').hidden = !on; toggle(e.currentTarget, on); });
+  $('#ghost').addEventListener('click', e => { showGhost = !showGhost; toggle(e.currentTarget, showGhost); dirty = true; });
+  $('#sound').addEventListener('click', e => { soundOn = !soundOn; toggle(e.currentTarget, soundOn); if (soundOn){ wakeAudio(); beep(660, .08); } });
+  $('#spread').addEventListener('click', () => {
+    if (!P || P.done) return;
+    for (const [g, G] of P.groups) if (g !== LOCK) place(G);
+    dirty = true; save();
+  });
+  const again = $('#again');
+  let armT = 0;
+  const disarm = () => { again.dataset.armed = '0'; again.textContent = '새로 섞기'; };
+  again.addEventListener('click', () => {
+    if (!P) return;
+    if (P.moves > 0 && !P.done && again.dataset.armed !== '1'){
+      again.dataset.armed = '1'; again.textContent = '한 번 더 누르면 섞어요';
+      clearTimeout(armT); armT = setTimeout(disarm, 2600);
+      return;
+    }
+    clearTimeout(armT); disarm();
+    newPuzzle(P.img, P.count, P.sample, P.dataURL);
+  });
+  $('#doneAgain').addEventListener('click', () => { stopAuto(); newPuzzle(P.img, P.count, P.sample, P.dataURL); });
+  $('#gear').addEventListener('click', () => { stopAuto(); syncStats(); $('#menu').hidden = false; });
+  $('#menuClose').addEventListener('click', () => { $('#menu').hidden = true; });
+  const fullBtn = $('#full');
+  const fsEl = document.documentElement;
+  if (!(fsEl.requestFullscreen || fsEl.webkitRequestFullscreen)) fullBtn.hidden = true;
+  fullBtn.addEventListener('click', () => {
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else { const r = (fsEl.requestFullscreen || fsEl.webkitRequestFullscreen).call(fsEl); if (r && r.catch) r.catch(() => toast('이 기기에서는 전체 화면을 쓸 수 없어요.')); }
+    } catch(e){ toast('이 기기에서는 전체 화면을 쓸 수 없어요.'); }
+    $('#menu').hidden = true;
+  });
+  $('#doneClose').addEventListener('click', () => { stopAuto(); showDone = false; $('#done').hidden = true; });
+
+  // clock: runs only after the first move and while the page is visible
+  let last = performance.now();
+  setInterval(() => {
+    const now = performance.now();
+    if (P && P.started && !P.done && !document.hidden){ P.elapsed += now - last; syncStats(); }
+    last = now;
+  }, 500);
+  document.addEventListener('visibilitychange', () => {
+    last = performance.now();
+    if (document.hidden) save(); else if (P && P.started) wake();
+  });
+  window.addEventListener('pagehide', save);
+
+  let rsT = 0;
+  new ResizeObserver(() => {
+    const oldS = S;
+    layout();
+    if (!P) return;
+    clampAll();
+    clearTimeout(rsT);
+    if (oldS !== S) rsT = setTimeout(renderAll, 160);
+  }).observe(stage);
+
+  boot();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+  if (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches){ const b = document.getElementById('full'); if (b) b.hidden = true; }
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
