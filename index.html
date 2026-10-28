@@ -160,6 +160,7 @@
   const stage = $('#stage');
   const KEY = 'jigsaw.v1';
   const LOCK = 0;
+  const DONE_DELAY = 4; // 완성 후 사진만 보여 주는 초
   const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
   // Tab outline on a unit edge: t runs along the edge, h is how far it bulges out (× tab size).
   const TPL = [
@@ -332,10 +333,16 @@
     P.pieces = P.pieces.filter(p => p.g !== gid).concat(G);
   }
   function finish(){
-    P.done = true; P.started = false; showDone = true;
+    P.done = true; P.started = false; showDone = false;
     [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .18), i*110));
     syncUI();
-    if (album.length) startAuto();
+    // 완성된 사진을 먼저 보여 주고, 몇 초 뒤에 완성 창을 띄운다
+    const cur = P;
+    setTimeout(() => {
+      if (P !== cur || !P.done) return;
+      showDone = true; syncUI();
+      if (album.length) startAuto();
+    }, DONE_DELAY*1000);
   }
 
   // ---------- rendering ----------
