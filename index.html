@@ -39,6 +39,10 @@
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
   }
   .app{position:relative;height:100%}
+  /* 화면이 세로면 게임 화면 전체를 90도 돌려 세로 화면을 꽉 채운다 — 태블릿을 옆으로 돌려 들면 가로 화면처럼 보임 (자동회전 꺼도 됨) */
+  @media (orientation:portrait){
+    .app{position:fixed;top:0;left:100vw;width:100vh;height:100vw;transform-origin:0 0;transform:rotate(90deg)}
+  }
   .btn,.sel{
     display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:58px;padding:0 18px;
     border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--ink);
@@ -158,6 +162,7 @@
   const cv = $('#board'), ctx = cv.getContext('2d');
   const hitCtx = document.createElement('canvas').getContext('2d');
   const stage = $('#stage');
+  const turned = matchMedia('(orientation: portrait)');
   const KEY = 'jigsaw.v1';
   const LOCK = 0;
   const DONE_DELAY = 4, DONE_DELAY_ALBUM = 6; // 완성 후 사진만 보여 주는 초 (사진 한 장 / 폴더 묶음)
@@ -360,8 +365,8 @@
     felt = ctx.createPattern(c, 'repeat');
   }
   function layout(){
-    const rc = stage.getBoundingClientRect();
-    W = Math.max(1, rc.width); H = Math.max(1, rc.height);
+    // 돌린 화면에서도 돌리기 전 크기를 쓴다
+    W = Math.max(1, stage.clientWidth); H = Math.max(1, stage.clientHeight);
     dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
     if (!felt) makeFelt();
@@ -441,7 +446,10 @@
   // ---------- input ----------
   function toWorld(e){
     const r = cv.getBoundingClientRect();
-    return { wx: (e.clientX - r.left - OX)/S, wy: (e.clientY - r.top - OY)/S };
+    // 세로 화면에서 90도 돌려 그렸으면 터치 위치도 돌려서 계산
+    const x = turned.matches ? e.clientY - r.top : e.clientX - r.left;
+    const y = turned.matches ? r.right - e.clientX : e.clientY - r.top;
+    return { wx: (x - OX)/S, wy: (y - OY)/S };
   }
   function hitTest(p, wx, wy){
     return hitCtx.isPointInPath(p.path, wx - p.x + p.c*P.cw, wy - p.y + p.r*P.ch);
