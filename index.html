@@ -607,7 +607,7 @@
   }
 
   // ---------- photo album: several photos, a random other one after each finish ----------
-  const ALBUM = 'jigsaw.album', MAX_ALBUM = 300, AUTO_SEC = 10;
+  const ALBUM = 'jigsaw.album', AUTO_SEC = 10;
   let album = [];   // keys into the photo store (File objects when the store can't be opened)
   let bag = [];     // keys not shown yet this round
   let curKey = null, importJob = 0, dbp = null;
@@ -664,7 +664,8 @@
     let files = [...list].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(f.name));
     if (!files.length){ toast('사진 파일이 없어요. 사진이 들어 있는 폴더를 골라 주세요.'); return; }
     shuffle(files);
-    if (files.length > MAX_ALBUM) files = files.slice(0, MAX_ALBUM);
+    // 장수 제한 없음 — 사진이 많으니 브라우저가 저장한 사진을 함부로 지우지 않게 부탁해 둔다
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
     const job = ++importJob;
     // start a puzzle straight away with the first photo that opens
     let first = -1, firstImg = null;
