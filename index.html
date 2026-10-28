@@ -540,15 +540,6 @@
     c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
     return c;
   }
-  // 새 사진은 화면 비율로 잘라서 판이 화면을 꽉 채우게 한다 (위아래를 자를 땐 얼굴이 남게 위쪽을 조금 더 남김)
-  function cover(img){
-    const a = W/H, w = img.width, h = img.height;
-    if (!(a > 0) || Math.abs(w/h - a) < .02) return img;
-    const cw = w/h > a ? Math.round(h*a) : w, ch = w/h > a ? h : Math.round(w/a);
-    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
-    c.getContext('2d').drawImage(img, Math.round((w-cw)/2), Math.round((h-ch)*.4), cw, ch, 0, 0, cw, ch);
-    return c;
-  }
   function sampleImage(){
     const w = 1600, h = 1100, c = document.createElement('canvas'); c.width = w; c.height = h;
     const g = c.getContext('2d');
@@ -665,7 +656,7 @@
     if (job !== importJob) return;
     if (first < 0){ toast('이 사진들은 열 수 없어요. 사진(JPG·PNG) 파일을 골라 주세요.'); return; }
     saveWarned = false;
-    newPuzzle(cover(firstImg), +$('#count').value, false);
+    newPuzzle(firstImg, +$('#count').value, false);
 
     // remember the photos (shrunk) so the album survives closing the app
     let stored = true;
@@ -711,7 +702,7 @@
           const img = await loadFit(blob);
           curKey = k; saveAlbum();
           $('#done').hidden = true;
-          newPuzzle(cover(img), +$('#count').value, false);
+          newPuzzle(img, +$('#count').value, false);
           return;
         } catch(e){ album = album.filter(x => x !== k); syncAlbum(); saveAlbum(); }
       }
@@ -768,7 +759,7 @@
     e.target.value = '';
     if (!f) return;
     const url = URL.createObjectURL(f), im = new Image();
-    im.onload = () => { URL.revokeObjectURL(url); saveWarned = false; newPuzzle(cover(fit(im, 1800)), +$('#count').value, false); };
+    im.onload = () => { URL.revokeObjectURL(url); saveWarned = false; newPuzzle(fit(im, 1800), +$('#count').value, false); };
     im.onerror = () => { URL.revokeObjectURL(url); toast('이 파일은 열 수 없어요. 사진(JPG·PNG) 파일을 골라 주세요.'); };
     im.src = url;
   });
