@@ -56,6 +56,11 @@
     background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
     background-position:calc(100% - 22px) 26px,calc(100% - 16px) 26px;background-size:6px 6px;background-repeat:no-repeat;background-color:var(--chip)}
   .sel option{background:var(--bar);color:var(--ink)}
+  /* 조각 수는 앱 안의 버튼으로 고른다 — 기기 기본 선택 창(select)은 돌린 화면을 따라 돌지 않아 세로로 크게 뜬다 */
+  .seg{display:flex;align-items:center;gap:6px}
+  .seg .lbl{color:var(--ink-dim);font-size:17px;padding-right:2px;white-space:nowrap}
+  .seg .btn{flex:1 1 0;min-width:0;min-height:54px;padding:0 2px;font-size:18px}
+  .seg .btn[aria-pressed="true"]{background:var(--brass);color:var(--brass-ink);border-color:transparent;font-weight:700}
   .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .stage{position:absolute;inset:0}
   #board{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
@@ -119,16 +124,17 @@
               <button id="albumClear" class="btn" type="button">묶음 비우기</button>
             </div>
           </div>
-          <select id="count" class="sel wide" aria-label="조각 수">
-            <option value="6">6조각</option>
-            <option value="12">12조각</option>
-            <option value="24">24조각</option>
-            <option value="32">32조각</option>
-            <option value="40">40조각</option>
-            <option value="48">48조각</option>
-            <option value="80">80조각</option>
-            <option value="120">120조각</option>
-          </select>
+          <div id="count" class="seg wide" role="group" aria-label="조각 수">
+            <span class="lbl">조각</span>
+            <button class="btn" type="button" data-v="6" aria-pressed="false">6</button>
+            <button class="btn" type="button" data-v="12" aria-pressed="true">12</button>
+            <button class="btn" type="button" data-v="24" aria-pressed="false">24</button>
+            <button class="btn" type="button" data-v="32" aria-pressed="false">32</button>
+            <button class="btn" type="button" data-v="40" aria-pressed="false">40</button>
+            <button class="btn" type="button" data-v="48" aria-pressed="false">48</button>
+            <button class="btn" type="button" data-v="80" aria-pressed="false">80</button>
+            <button class="btn" type="button" data-v="120" aria-pressed="false">120</button>
+          </div>
           <button id="ghost" class="btn" type="button" aria-pressed="false">밑그림</button>
           <button id="peek" class="btn" type="button" aria-pressed="false">원본 보기</button>
           <button id="spread" class="btn" type="button">조각 펼치기</button>
@@ -682,7 +688,7 @@
     if (job !== importJob) return;
     if (first < 0){ toast('이 사진들은 열 수 없어요. 사진(JPG·PNG) 파일을 골라 주세요.'); return; }
     saveWarned = false;
-    newPuzzle(firstImg, +$('#count').value, false);
+    newPuzzle(firstImg, segVal('#count'), false);
 
     // remember the photos (shrunk) so the album survives closing the app
     let stored = true;
@@ -728,7 +734,7 @@
           const img = await loadFit(blob);
           curKey = k; saveAlbum();
           $('#done').hidden = true;
-          newPuzzle(landscape(img), +$('#count').value, false);
+          newPuzzle(landscape(img), segVal('#count'), false);
           return;
         } catch(e){ album = album.filter(x => x !== k); syncAlbum(); saveAlbum(); }
       }
@@ -762,9 +768,7 @@
     $('#pc').textContent = `${P.groups.get(LOCK).length}/${P.pieces.length}`;
   }
   function syncUI(){
-    const sel = $('#count');
-    if (![...sel.options].some(o => +o.value === P.count)) sel.add(new Option(`${P.count}조각`, P.count));
-    sel.value = String(P.count);
+    syncSeg('#count', P.count);
     const pv = $('#pv');
     pv.width = 480; pv.height = Math.round(480*P.img.height/P.img.width);
     pv.getContext('2d').drawImage(P.img, 0, 0, pv.width, pv.height);
@@ -779,13 +783,16 @@
     clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 4200);
   }
   const toggle = (btn, on) => btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  // 버튼 묶음: 눌린 버튼이 고른 값
+  function segVal(sel){ const b = $(sel + ' [aria-pressed="true"]'); return b ? +b.dataset.v : 12; }
+  function syncSeg(sel, v){ for (const b of $(sel).querySelectorAll('[data-v]')) toggle(b, +b.dataset.v === v); }
 
   $('#file').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!f) return;
     const url = URL.createObjectURL(f), im = new Image();
-    im.onload = () => { URL.revokeObjectURL(url); saveWarned = false; newPuzzle(landscape(fit(im, 1800)), +$('#count').value, false); };
+    im.onload = () => { URL.revokeObjectURL(url); saveWarned = false; newPuzzle(landscape(fit(im, 1800)), segVal('#count'), false); };
     im.onerror = () => { URL.revokeObjectURL(url); toast('이 파일은 열 수 없어요. 사진(JPG·PNG) 파일을 골라 주세요.'); };
     im.src = url;
   });
@@ -813,7 +820,12 @@
     clearTimeout(clrT); clr.dataset.armed = '0'; clr.textContent = '묶음 비우기';
     clearAlbum();
   });
-  $('#count').addEventListener('change', e => { if (P) newPuzzle(P.img, +e.target.value, P.sample, P.dataURL); });
+  $('#count').addEventListener('click', e => {
+    const b = e.target.closest('[data-v]');
+    if (!b || !P || +b.dataset.v === P.count) return;
+    syncSeg('#count', +b.dataset.v);
+    newPuzzle(P.img, +b.dataset.v, P.sample, P.dataURL);
+  });
   $('#peek').addEventListener('click', e => { const on = $('#peekBox').hidden; $('#peekBox').hidden = !on; toggle(e.currentTarget, on); });
   $('#ghost').addEventListener('click', e => { showGhost = !showGhost; toggle(e.currentTarget, showGhost); dirty = true; });
   $('#sound').addEventListener('click', e => { soundOn = !soundOn; toggle(e.currentTarget, soundOn); if (soundOn){ wakeAudio(); beep(660, .08); } });
