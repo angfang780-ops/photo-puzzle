@@ -129,11 +129,11 @@
             <button class="btn" type="button" data-v="6" aria-pressed="false">6</button>
             <button class="btn" type="button" data-v="12" aria-pressed="true">12</button>
             <button class="btn" type="button" data-v="24" aria-pressed="false">24</button>
+            <button class="btn" type="button" data-v="28" aria-pressed="false">28</button>
             <button class="btn" type="button" data-v="32" aria-pressed="false">32</button>
             <button class="btn" type="button" data-v="40" aria-pressed="false">40</button>
+            <button class="btn" type="button" data-v="44" aria-pressed="false">44</button>
             <button class="btn" type="button" data-v="48" aria-pressed="false">48</button>
-            <button class="btn" type="button" data-v="80" aria-pressed="false">80</button>
-            <button class="btn" type="button" data-v="120" aria-pressed="false">120</button>
           </div>
           <button id="ghost" class="btn" type="button" aria-pressed="false">밑그림</button>
           <button id="peek" class="btn" type="button" aria-pressed="false">원본 보기</button>
@@ -195,9 +195,13 @@
 
   // ---------- geometry ----------
   function gridFor(n, aspect){
-    const cols = Math.max(2, Math.round(Math.sqrt(n*aspect)));
-    const rows = Math.max(2, Math.round(n/cols));
-    return { cols, rows };
+    // 고른 조각 수에 가장 가깝고 조각이 정사각형에 가까운 줄·칸 (예전 방식은 4:3 사진에서 44를 골라도 48이 나왔다)
+    let best = null;
+    for (let rows = 2; rows <= 15; rows++) for (let cols = 2; cols <= 20; cols++){
+      const s = Math.abs(cols*rows - n)/n*5 + Math.abs(Math.log(aspect/cols*rows));
+      if (!best || s < best.s) best = { s, cols, rows };
+    }
+    return { cols: best.cols, rows: best.rows };
   }
   function makeParams(cols, rows){
     const e = () => [Math.random() < .5 ? 1 : -1, +rnd(-.06,.06).toFixed(3), +rnd(.9,1.08).toFixed(3)];
