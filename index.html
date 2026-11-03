@@ -4,7 +4,7 @@
 <title>내 사진 퍼즐</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#12261F">
+<meta name="theme-color" content="#151D2B">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,11 +20,11 @@
   html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
   :root{
     color-scheme: dark;
-    --felt:#1D3A33;
-    --felt-deep:#12261F;
-    --bar:#0E1F1A;
+    --felt:#1F2A3C;
+    --felt-deep:#151D2B;
+    --bar:#101724;
     --ink:#ECE5D3;
-    --ink-dim:#9FB3A8;
+    --ink-dim:#A3AEC2;
     --brass:#D8A445;
     --brass-ink:#2A1D06;
     --line:rgba(236,229,211,.14);
@@ -74,7 +74,7 @@
     box-shadow:0 12px 30px rgba(0,0,0,.45);pointer-events:none
   }
   .peek canvas{display:block;width:100%;height:auto}
-  .veil{position:absolute;inset:0;display:grid;place-items:center;padding:16px;background:rgba(6,16,13,.55);overflow:auto}
+  .veil{position:absolute;inset:0;display:grid;place-items:center;padding:16px;background:rgba(8,12,20,.55);overflow:auto}
   .card{
     width:min(100%,460px);padding:26px 24px 24px;border-radius:18px;
     background:var(--bar);border:1px solid var(--line);box-shadow:0 20px 50px rgba(0,0,0,.5);
@@ -365,7 +365,7 @@
   function makeFelt(){
     const c = document.createElement('canvas'); c.width = c.height = 192;
     const g = c.getContext('2d');
-    g.fillStyle = '#1D3A33'; g.fillRect(0,0,192,192);
+    g.fillStyle = '#1F2A3C'; g.fillRect(0,0,192,192);
     let s = 7;
     const r = () => (s = (s*16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 2600; i++){
