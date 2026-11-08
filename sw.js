@@ -1,12 +1,13 @@
 // 오프라인에서도 열리도록 앱 파일을 저장해 두고, 인터넷이 되면 새 버전으로 갱신한다.
-const CACHE = 'photo-puzzle-v14';
+const CACHE = 'photo-puzzle-v15';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
+// 앱 11개가 같은 주소(github.io)라 저장 공간을 같이 쓴다 — 이 앱의 옛 버전만 지운다 (전엔 다른 앱 저장분까지 지워 와이파이 없이 안 열렸음)
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k.startsWith(CACHE.replace(/\d+$/, ''))).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
